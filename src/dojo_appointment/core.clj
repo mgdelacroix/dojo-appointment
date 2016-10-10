@@ -72,7 +72,7 @@ and outputs a html table element using these."
   (x/element :table {}
     (x/element :tr {}
       (map #(x/element :th {} %) header))
-    (map (memfn getrow) rows)))
+    (map getrow rows)))
 
 (defroutes app
   (GET "/freeslots" []
