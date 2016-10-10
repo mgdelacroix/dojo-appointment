@@ -9,17 +9,22 @@
    [compojure.core :refer [defroutes ANY GET PUT POST]]))
 
 (defprotocol TableRow
-  (getcells [this]))
+  (getrow [this]))
 
 (defrecord Slot [start end]
   TableRow
-  (getcells [this]
-    (map #(get this %) (keys this))))
+  (getrow [this]
+    (x/element :tr {}
+      [(x/element :td {} (:start this))
+       (x/element :td {} (:end this))])))
 
 (defrecord Booking [slot name]
   TableRow
-  (getcells [this]
-    (map #(get this %) (keys this))))
+  (getrow [this]
+    (x/element :tr {}
+      [(x/element :td {} (:start (:slot this)))
+       (x/element :td {} (:end (:slot this)))
+       (x/element :td {} (:name this))])))
 
 (defrecord BookingSystem [free booked])
 
@@ -30,10 +35,10 @@
 (def appts (ref (init 0 100 5)))
 
 (defn getbookings []
-  (map getcells (:booked @appts)))
+  (:booked @appts))
 
 (defn getfreeslots []
-  (map getcells (:free @appts)))
+  (:free @appts))
 
 (defn with-new [{:keys [free booked]} start end name]
   (let [slot (->Slot start end)
@@ -67,11 +72,7 @@ and outputs a html table element using these."
   (x/element :table {}
     (x/element :tr {}
       (map #(x/element :th {} %) header))
-    (map
-      (fn [row]
-        (x/element :tr {}
-          (map (fn [cell] (x/element :td {} cell)) row)))
-      (map getcells rows))))
+    (map (memfn getrow) rows)))
 
 (defroutes app
   (GET "/freeslots" []
@@ -82,25 +83,22 @@ and outputs a html table element using these."
   (GET "/bookings" req
     (println "Received message for bookings")
     (x/emit-str
-      (elem-table ["Start" "End" "Name"] (getbookings))))
+      (htmldoc "Booked Appointments"
+        (elem-table ["Start" "End" "Name"] (getbookings)))))
   (GET "/bookapt" {{:strs [begin end name]} :query-params}
     (println "Received message to bookapt:" begin "," end "," name)
     (try 
-      (book-apt begin end name)
-      (simpletext-html
-        "Appointment Booking"
-        "Appointment successfully booked!")
+      (book-apt (Integer. begin) (Integer. end) name)
+      (x/emit-str
+        (simpletext-html
+          "Appointment Booking"
+          "Appointment successfully booked!"))
       (catch Exception x
         (x/emit-str
           (simpletext-html
             "Appointment Booking"
             "Something went wrong"
-            (.getMessage x)))))
-    #_
-    (let [{:strs [begin end name]} params]
-      (book-apt begin end name)))
-  (PUT "/shit" req
-    (s/join ";" (keys req))))
+            (.getMessage x)))))))
 
 (def handler
   (-> app wrap-params))
