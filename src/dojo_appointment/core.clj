@@ -39,17 +39,11 @@
   (let [free (set (map (partial apply ->Slot) (partition 2 (range min max step))))]
     (->BookingSystem free #{})))
 
-(def appts (ref (init 0 100 5)))
-
-(defn getbookings []
-  (:booked @appts))
-
-(defn getfreeslots []
-  (:free @appts))
+(def booksys (ref (init 0 100 5)))
 
 (defn with-new [{:keys [free booked]} start end name]
   (let [slot (->Slot start end)
-        free (getfreeslots)]
+        free (:free @booksys)]
     (if-let [choosen (get free slot)]
       (let [updfree (disj free choosen)
             updbooked (conj booked (->Booking choosen name))]
@@ -59,7 +53,7 @@
 (defn book-apt [start end name]
   (if (not (empty? name))
     (dosync
-      (alter appts with-new start end name))
+      (alter booksys with-new start end name))
     (throw (Exception. "Name was empty"))))
 
 (defn elempara [text]
@@ -92,13 +86,15 @@ and outputs a html table element using these."
   (GET "/slots" []
     (x/emit-str
       (htmldoc "Appointment Free Slots"
-        (elem-table ["Begin" "End" "Name"] (getfreeslots))
+        (elem-table ["Begin" "End" "Name"] 
+          (sort-by :start (:free @booksys)))
         (elempara
           (x/element :a {:href "/bookings"} "View all existing bookings")))))
   (GET "/bookings" []
     (x/emit-str
       (htmldoc "Booked Appointments"
-        (elem-table ["Start" "End" "Name"] (getbookings))
+        (elem-table ["Start" "End" "Name"] 
+          (sort-by (comp :start :slot) (:booked @booksys)))
         (elempara
           (x/element :a {:href "/slots"} "View free slots to book")))))
   (POST "/bookapt" [begin end name]
