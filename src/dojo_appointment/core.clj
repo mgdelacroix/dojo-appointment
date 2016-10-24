@@ -56,6 +56,14 @@
       (alter booksys with-new start end name))
     (throw (Exception. "Name was empty"))))
 
+(def headers [:h1 :h2 :h3 :h4 :h5 :h6])
+
+(defn elemheader
+  ([text]
+   (elemheader 1 text))
+  ([level text]
+   (x/element (nth headers level) {} text)))
+
 (defn elempara [text]
   (x/element :p {} text))
 
@@ -64,7 +72,6 @@
     (x/element :head {}
       (x/element :title {} title))
     (x/element :body {}
-      (x/element :h1 {} title)
       content)))
 
 (defn elem-table [header rows]
@@ -79,6 +86,7 @@ and outputs a html table element using these."
   (GET "/" []
     (x/emit-str
       (htmldoc "Appointment Booking System"
+        (elemheader "Main menu:")
         (elempara
           (x/element :a {:href "/slots"} "View available free slots"))
         (elempara
@@ -86,6 +94,7 @@ and outputs a html table element using these."
   (GET "/slots" []
     (x/emit-str
       (htmldoc "Appointment Free Slots"
+        (elemheader "Book free slots:")
         (elem-table ["Begin" "End" "Name"] 
           (sort-by :start (:free @booksys)))
         (elempara
@@ -93,6 +102,7 @@ and outputs a html table element using these."
   (GET "/bookings" []
     (x/emit-str
       (htmldoc "Booked Appointments"
+        (elemheader "Booked Appointments table:")
         (elem-table ["Start" "End" "Name"] 
           (sort-by (comp :start :slot) (:booked @booksys)))
         (elempara
