@@ -9,12 +9,14 @@ compojure for request handling.
 After cloning the repository the easiest way to start a running
 service is using the
 [lein-ring](https://github.com/weavejester/lein-ring) Leiningen
-plugin. For this you need to add the folowing to your profiles.clj:
+plugin. For this you need to add the folowing declarations to
+~/.lein/profiles.clj:
 
 > {:user {:plugins [[lein-ring "0.9.7"]]}}
 
-Then you can go cd into the root project and start up the server with
-the following command:
+After this, you can go into the root directory of the project and
+start up the server with the following command, which also opens
+browser on the start page:
 
 > lein ring server
 
