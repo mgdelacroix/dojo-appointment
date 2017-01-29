@@ -54,7 +54,7 @@
   (if (not (empty? name))
     (dosync
       (alter booksys with-new start end name))
-    (throw (Exception. "Name was empty"))))
+    (throw  (Exception. "Name was empty"))))
 
 (def headers [:h1 :h2 :h3 :h4 :h5 :h6])
 
@@ -106,7 +106,7 @@ and outputs a html table element using these."
         (elem-table ["Start" "End" "Name"] 
           (sort-by (comp :start :slot) (:booked @booksys)))
         (elempara
-          (x/element :a {:href "/slots"} "View free slots to book")))))
+          (x/element :a {:href "/slots"} "Book another appointment")))))
   (POST "/bookapt" [begin end name]
     (try 
       (book-apt (Integer. begin) (Integer. end) name)
