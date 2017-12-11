@@ -3,10 +3,13 @@
    [clojure.java.io :as jio]
    [clojure.string :as s]
    [clojure.data.xml :as x]
+   [clojure.spec.alpha :as spec]
+   [spec-tools.spec :as spect]
    [org.httpkit.server :as server]
-   [liberator.core :refer [resource defresource]]
+   ;;[liberator.core :refer [resource defresource]]
    [ring.middleware.params :refer [wrap-params]]
-   [compojure.core :refer [defroutes ANY GET PUT POST]]))
+   ;;[compojure.core :refer [defroutes ANY GET PUT POST]]
+   [compojure.api.sweet :refer :all]))
 
 (defprotocol TableRow
   (getrow [this]))
@@ -82,51 +85,56 @@ and outputs a html table element using these."
       (map #(x/element :th {} %) header))
     (map getrow rows)))
 
-(defroutes app
-  (GET "/" []
-    (x/emit-str
-      (htmldoc "Appointment Booking System"
-        (elemheader "Main menu:")
-        (elempara
-          (x/element :a {:href "/slots"} "View available free slots"))
-        (elempara
-          (x/element :a {:href "/bookings"} "View all existing bookings")))))
-  (GET "/slots" []
-    (x/emit-str
-      (htmldoc "Appointment Free Slots"
-        (elemheader "Book free slots:")
-        (elem-table ["Begin" "End" "Name"] 
-          (sort-by :start (:free @booksys)))
-        (elempara
-          (x/element :a {:href "/bookings"} "View all existing bookings")))))
-  (GET "/bookings" []
-    (x/emit-str
-      (htmldoc "Booked Appointments"
-        (elemheader "Booked Appointments table:")
-        (elem-table ["Start" "End" "Name"] 
-          (sort-by (comp :start :slot) (:booked @booksys)))
-        (elempara
-          (x/element :a {:href "/slots"} "Book another appointment")))))
-  (POST "/bookapt" [begin end name]
-    (try 
-      (book-apt (Integer. begin) (Integer. end) name)
-      (x/emit-str
-        (htmldoc "Appointment Booking"
-          (elempara
-            "Appointment successfully booked!")
-          (elempara
-            (x/element :a {:href "/bookings"} "View all booked appointments"))
-          (elempara
-            (x/element :a {:href "/slots"} "Book another free slot"))))
-      (catch Exception x
-        (x/emit-str
-          (htmldoc "Appointment Booking Error"
-            (elempara
-              "Something went wrong!")
-            (elempara
-              (.getMessage x))
-            (elempara
-              (x/element :a {:href "/slots"} "Try booking another free slot"))))))))
+(spec/def ::name spect/string?)
+
+(def app
+  (context "/" []
+           :coercion :spec
+           (GET "/" []
+                (x/emit-str
+                 (htmldoc "Appointment Booking System"
+                          (elemheader "Main menu:")
+                          (elempara
+                           (x/element :a {:href "/slots"} "View available free slots"))
+                          (elempara
+                           (x/element :a {:href "/bookings"} "View all existing bookings")))))
+           (GET "/slots" []
+                (x/emit-str
+                 (htmldoc "Appointment Free Slots"
+                          (elemheader "Book free slots:")
+                          (elem-table ["Begin" "End" "Name"]
+                                      (sort-by :start (:free @booksys)))
+                          (elempara
+                           (x/element :a {:href "/bookings"} "View all existing bookings")))))
+           (GET "/bookings" []
+                (x/emit-str
+                 (htmldoc "Booked Appointments"
+                          (elemheader "Booked Appointments table:")
+                          (elem-table ["Start" "End" "Name"]
+                                      (sort-by (comp :start :slot) (:booked @booksys)))
+                          (elempara
+                           (x/element :a {:href "/slots"} "Book another appointment")))))
+           (POST "/bookapt" [begin end name]
+                 :return ::name
+                 (try
+                   (book-apt (Integer. begin) (Integer. end) name)
+                   (x/emit-str
+                    (htmldoc "Appointment Booking"
+                             (elempara
+                              "Appointment successfully booked!")
+                             (elempara
+                              (x/element :a {:href "/bookings"} "View all booked appointments"))
+                             (elempara
+                              (x/element :a {:href "/slots"} "Book another free slot"))))
+                   (catch Exception x
+                     (x/emit-str
+                      (htmldoc "Appointment Booking Error"
+                               (elempara
+                                "Something went wrong!")
+                               (elempara
+                                (.getMessage x))
+                               (elempara
+                                (x/element :a {:href "/slots"} "Try booking another free slot")))))))))
 
 (def handler
   (-> app wrap-params))
